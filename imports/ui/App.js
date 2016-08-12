@@ -1,6 +1,7 @@
 import React, {Component, PropTypes} from 'react';
 import {createContainer} from 'meteor/react-meteor-data';
 import ReactDOM from 'react-dom';
+import smartcrop from './smartcrop'
 
 import {Binary} from '../api/binary.js';
 
@@ -14,34 +15,27 @@ const App = React.createClass({
 	handleSubmit(event) {
 		event.preventDefault();
 		const link = this.refs.input.value.trim();
-		
-		const fileObj = new FS.File();
-		fileObj.attachData(link, function () {
-			console.log(arguments);
-			Images.insert(fileObj, function (err, fileObj) {
-				console.log(arguments);
-			});
+
+		this.setState({link})
+		const binaries = Binary.insert({
+			link,
+			time: new Date(),
 		});
 		this.refs.input.value = '';
 	},
 
 	handleSmartCrop() {
-		const {link} = this.state;
+		const ctx = this.refs.canvas.getContext('2d');
 
-		const cropSource = Images.find({}).fetch();
-		console.log(cropSource);
-
-		const binaries = Binary.find({}).fetch();
-		console.log(binaries);
+		smartcrop.crop(ctx, {width: 200, height: 400}).then(result => console.log(result));
 	},
 
 	renderExample() {
 		const {link} = this.state;
-		var ctx = this.refs.canvas.getContext('2d');
-		var img = new Image();
+		const ctx = this.refs.canvas.getContext('2d');
+		const img = new Image();
 		img.onload = function(){
 			ctx.drawImage(img,0,0);
-			ctx.stroke();
 		};
 		img.src = link;
 	},
@@ -52,22 +46,13 @@ const App = React.createClass({
 		return (
 			<div className="container">
 				<form className="new-task" onSubmit={this.handleSubmit} >
-					<input
-						type="text"
-						ref="input"
-						placeholder="Type to add new tasks"
-					/>
+					<input type="text" ref="input" placeholder="Type to add new tasks" />
 				</form>
-				<buntton onClick={this.handleSmartCrop}>Click!</buntton>
-				<buntton onClick={this.renderExample}>Click2!</buntton>
+				<div onClick={this.handleSmartCrop}>Smart crop me!</div>
+				<div onClick={this.renderExample}>Resize me!</div>
 
 				{link ?
-					<img
-						id="source"
-						ref="source"
-						src={link}
-						alt="Original image"
-					/>
+					<img id="source" ref="source" src={link} alt="Original image" />
 				: null}
 
 				<canvas
@@ -77,7 +62,7 @@ const App = React.createClass({
 				/>
 
 				{this.props.binary.map((item, index) =>
-					<div key={index}>{item.binary}</div>
+					<div key={index}>{item.link}</div>
 				)}
 
 			</div>
