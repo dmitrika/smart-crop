@@ -1,6 +1,4 @@
-import React, {Component, PropTypes} from 'react';
-import {createContainer} from 'meteor/react-meteor-data';
-import ReactDOM from 'react-dom';
+import React from 'react';
 import smartcrop from './smartcrop'
 import Loading from 'react-loading';
 
