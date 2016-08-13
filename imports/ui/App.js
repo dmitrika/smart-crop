@@ -42,6 +42,7 @@ export default App = React.createClass({
 		}).then((_id) => {
 			const link   = Images.findOne({_id}).url();
 			const image  = new Image();
+
 			image.onload = () => this.handleSmartCrop(image);
 			image.src    = link;
 		});
@@ -54,6 +55,7 @@ export default App = React.createClass({
 			const crop    = result.topCrop;
 			const canvas  = this.refs.canvas;
 			const ctx     = canvas.getContext('2d');
+
 			canvas.width  = options.width;
 			canvas.height = options.height;
 			ctx.drawImage(image, crop.x, crop.y, crop.width, crop.height, 0, 0, canvas.width, canvas.height);
@@ -66,12 +68,15 @@ export default App = React.createClass({
 		const canvas  = this.refs.canvas;
 		const dataURL = canvas.toDataURL('image/png');
 		const data    = dataURL.replace(/^data:image\/(png|jpg);base64,/, '');
+
 		Meteor.call('saveData', data);
+
 		this.setState({dataSaved: true});
 	},
 
 	clearCanvas() {
 		const ctx = this.refs.canvas.getContext('2d');
+
 		ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
 	},
 
