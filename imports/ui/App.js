@@ -2,23 +2,24 @@ import React, {Component, PropTypes} from 'react';
 import {createContainer} from 'meteor/react-meteor-data';
 import ReactDOM from 'react-dom';
 import smartcrop from './smartcrop'
+import Loading from 'react-loading';
 
 import {Binary} from '../api/binary.js';
 import {Images} from '../api/cfs/cfs.js';
 
-const App = React.createClass({
-	propTypes: {
-		binary: PropTypes.array.isRequired,
-	},
-
+export default App = React.createClass({
 	getInitialState: () => ({
 		link: '',
-		currentID: '',
+		showSaveButton: false,
+		showLoader: false,
+		dataSaved: false,
 	}),
 
 	componentDidMount() {
-		window.Images = Images;
 		Meteor.subscribe('images', (error, result) => {
+			if (error) throw error;
+		});
+		Meteor.subscribe('binary', (error, result) => {
 			if (error) throw error;
 		});
 	},
@@ -26,65 +27,90 @@ const App = React.createClass({
 	handleSubmit(event) {
 		event.preventDefault();
 		const sourceUrl = this.refs.input.value.trim();
+		if (!sourceUrl) return;
 
-		new Promise((resolve, reject) => {
-			Meteor.call('saveImage', sourceUrl, (error, id) => {
-				if (error) throw error;
-				resolve(id);
-			});
-		}).then((id) => {
-			const link = Images.findOne({_id: id}).url();
-			this.setState({link, currentID: id});
-		})
-
+		this.clearCanvas();
 		this.refs.input.value = '';
+		this.setState({link: sourceUrl, showLoader: true, dataSaved: false});
+		this.saveImage(sourceUrl);
 	},
 
-	handleSmartCrop() {
-		const img = this.refs.source;
-		const options = {debug: true, width: 400, height: 200};
-
-		smartcrop.crop(img, options).then(result => {
-			const crop    = result.topCrop;
-			const canvas   = this.refs.canvas;
-			const ctx     = canvas.getContext('2d');
-			canvas.width  = options.width;
-			canvas.height = options.height;
-			ctx.drawImage(img, crop.x, crop.y, crop.width, crop.height, 0, 0, canvas.width, canvas.height);
+	saveImage(sourceUrl) {
+		new Promise((resolve, reject) => {
+			Meteor.call('saveImage', sourceUrl, (error, _id) => {
+				if (error) throw error;
+				resolve(_id);
+			});
+		}).then((_id) => {
+			const link   = Images.findOne({_id}).url();
+			const image  = new Image();
+			image.onload = () => this.handleSmartCrop(image);
+			image.src    = link;
 		});
 	},
 
+	handleSmartCrop(image) {
+		const options = {debug: true, width: 400, height: 200};
+
+		smartcrop.crop(image, options).then(result => {
+			const crop    = result.topCrop;
+			const canvas  = this.refs.canvas;
+			const ctx     = canvas.getContext('2d');
+			canvas.width  = options.width;
+			canvas.height = options.height;
+			ctx.drawImage(image, crop.x, crop.y, crop.width, crop.height, 0, 0, canvas.width, canvas.height);
+
+			this.setState({showSaveButton: true, showLoader: false})
+		});
+	},
+
+	handleSave() {
+		const canvas  = this.refs.canvas;
+		const dataURL = canvas.toDataURL('image/png');
+		const data    = dataURL.replace(/^data:image\/(png|jpg);base64,/, '');
+		Meteor.call('saveData', data);
+		this.setState({dataSaved: true});
+	},
+
+	clearCanvas() {
+		const ctx = this.refs.canvas.getContext('2d');
+		ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+	},
+
 	render() {
-		const {link} = this.state;
+		const {link, showSaveButton, showLoader, dataSaved} = this.state;
 
 		return (
 			<div className="container">
-				<form className="new-task" onSubmit={this.handleSubmit} >
-					<input type="text" ref="input" placeholder="Type to add new tasks" />
-				</form>
+				<div className="header">
+					<form onSubmit={this.handleSubmit} >
+						<input type="text" ref="input" placeholder="Insert image url" />
+					</form>
 
-				{link ?
-					<div onClick={this.handleSmartCrop}>Smart crop me!</div>
-				: null}
+					<button type="button" onClick={this.handleSubmit}>Get image!</button>
 
-				{link ?
-					<img id="source" ref="source" src={link} alt="Original image" />
-				: null}
+					{showSaveButton ?
+						<button type="button" onClick={this.handleSave}>Save as base64!</button>
+					: null}
 
-				<canvas ref="canvas" />
-
-				{this.props.binary.map((item, index) =>
-					<div key={index}>{item.link}</div>
-				)}
-
+					{dataSaved ? <span>Done!</span> : null}
+				</div>
+				<div className="images">
+					<div className="images__source">
+						{link ?
+							<img src={link} alt="Original image"/>
+						: null}
+					</div>
+					<div className="images__cropped">
+						{showLoader ?
+							<div className="loader">
+								<Loading type='cylon' color='#2a5885' />
+							</div>
+						: null}
+						<canvas ref="canvas" />
+					</div>
+				</div>
 			</div>
 		);
 	}
 });
-
-
-export default createContainer(() => {
-	return {
-		binary: Binary.find({}).fetch(),
-	};
-}, App);

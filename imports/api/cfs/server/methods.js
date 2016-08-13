@@ -1,7 +1,8 @@
 import {Images} from '../cfs.js';
+import {Binary} from '/imports/api/binary.js';
 
 Meteor.methods({
-	saveImage(link, uniqID) {
+	saveImage(link) {
 		const newFile = new FS.File();
 
 		newFile.attachData(link, error => {
@@ -14,5 +15,8 @@ Meteor.methods({
 		return new Promise((resolve, reject) => {
 			Images.on('stored', fileObj => resolve(fileObj._id));
 		});
+	},
+	saveData(data) {
+		Binary.insert({data, createdAt: new Date()});
 	}
 });
