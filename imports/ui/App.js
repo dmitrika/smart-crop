@@ -43,12 +43,12 @@ export default App = React.createClass({
 			const link   = Images.findOne({_id}).url();
 			const image  = new Image();
 
-			image.onload = () => this.handleSmartCrop(image);
+			image.onload = () => this.handleSmartCrop(image, _id);
 			image.src    = link;
 		});
 	},
 
-	handleSmartCrop(image) {
+	handleSmartCrop(image, _id) {
 		const options = {debug: true, width: 400, height: 200};
 
 		smartcrop.crop(image, options).then(result => {
@@ -61,6 +61,7 @@ export default App = React.createClass({
 			ctx.drawImage(image, crop.x, crop.y, crop.width, crop.height, 0, 0, canvas.width, canvas.height);
 
 			this.setState({showSaveButton: true, showLoader: false})
+			Meteor.call('removeSourceImage', _id);
 		});
 	},
 

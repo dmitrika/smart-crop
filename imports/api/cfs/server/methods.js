@@ -16,6 +16,9 @@ Meteor.methods({
 			Images.on('stored', fileObj => resolve(fileObj._id));
 		});
 	},
+	removeSourceImage(_id) {
+		Images.remove(_id);
+	},
 	saveData(data) {
 		Binary.insert({data, createdAt: new Date()});
 	}
